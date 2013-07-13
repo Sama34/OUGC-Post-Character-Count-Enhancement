@@ -56,14 +56,17 @@ function ougc_pochcoen_info()
 
 function ougc_pochcoen(&$dh)
 {
-	global $settings;
-
-	$msgcount = ougc_pochcoen_countchars($dh->data['message']);
-	$minchars = (int)$settings['minmessagelength'];
-
-	if($msgcount < $minchars && $minchars > 0 && !is_moderator($dh->data['fid'], '', $dh->data['uid']))
+	if(!empty($dh->data['message']))
 	{
-		$dh->set_error('message_too_short', array($minchars));
+		global $settings;
+
+		$msgcount = ougc_pochcoen_countchars($dh->data['message']);
+		$minchars = (int)$settings['minmessagelength'];
+
+		if($msgcount < $minchars && $minchars > 0 && !is_moderator($dh->data['fid'], '', $dh->data['uid']))
+		{
+			$dh->set_error('message_too_short', array($minchars));
+		}
 	}
 }
 
