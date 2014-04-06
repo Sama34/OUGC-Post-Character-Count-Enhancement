@@ -67,8 +67,8 @@ function ougc_pochcoen_info()
 		'website'		=> 'http://mods.mybb.com/view/ougc-post-character-count-enhancement',
 		'author'		=> 'Omar G.',
 		'authorsite'	=> 'http://omarg.me',
-		'version'		=> '1.0',
-		'versioncode'	=> 1000,
+		'version'		=> '1.1',
+		'versioncode'	=> 1100,
 		'compatibility'	=> '16*',
 		'guid' 			=> '2b70c8cd879291b5d65a6aacb9ee0473'
 	);
