@@ -2,27 +2,27 @@
 
 /***************************************************************************
  *
- *   OUGC Post Character Count Enhancement plugin (/inc/plugins/ougc_pochcoen.php)
- *	 Author: Omar Gonzalez
- *   Copyright: © 2013 Omar Gonzalez
- *   
- *   Website: http://community.mybb.com/user-25096.html
+ *	OUGC Post Character Count Enhancement plugin (/inc/plugins/ougc_pochcoen.php)
+ *	Author: Omar Gonzalez
+ *	Copyright: © 2013-2014 Omar Gonzalez
  *
- *   Strips HTML/MyCode/Quotes from being counted in the minimum/maximum characters per post verification.
+ *	Website: http://omarg.me
+ *
+ *	Strips HTML/MyCode/Quotes from being counted in the minimum/maximum characters per post verification proccess.
  *
  ***************************************************************************
- 
+
 ****************************************************************************
 	This program is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
 	the Free Software Foundation, either version 3 of the License, or
 	(at your option) any later version.
-	
+
 	This program is distributed in the hope that it will be useful,
 	but WITHOUT ANY WARRANTY; without even the implied warranty of
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 	GNU General Public License for more details.
-	
+
 	You should have received a copy of the GNU General Public License
 	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ****************************************************************************/
@@ -30,11 +30,30 @@
 // Die if IN_MYBB is not defined, for security reasons.
 defined('IN_MYBB') or die('Direct initialization of this file is not allowed.');
 
-// Tell MyBB when to run the hook
+// Run/Add Hooks
 if(!defined('IN_ADMINCP'))
 {
-	$plugins->add_hook('datahandler_post_validate_post', 'ougc_pochcoen');
-	$plugins->add_hook('datahandler_post_validate_thread', 'ougc_pochcoen');
+	$function = create_function('&$dh', '
+		// Message is not being edited
+		if(!isset($dh->data[\'message\']))
+		{
+			return;
+		}
+
+		global $settings;
+
+		$msgcount = ougc_countchars($dh->data[\'message\']);
+		$minchars = (int)$settings[\'minmessagelength\'];
+
+		if($msgcount < $minchars && $minchars > 0 && !is_moderator($dh->data[\'fid\'], \'\', $dh->data[\'uid\']))
+		{
+			$dh->set_error(\'message_too_short\', array($minchars));
+		}
+	');
+
+	$plugins->add_hook('datahandler_post_validate_post', $function);
+	$plugins->add_hook('datahandler_post_validate_thread', $function);
+	unset($function);
 }
 
 // Plugin API
@@ -44,43 +63,92 @@ function ougc_pochcoen_info()
 
 	return array(
 		'name'			=> 'OUGC Post Character Count Enhancement',
-		'description'	=> 'Strips HTML/MyCode/Quotes from being counted in the minimum/maximum characters per post verification.',
+		'description'	=> 'Strips HTML/MyCode/Quotes from being counted in the minimum/maximum characters per post verification proccess.',
 		'website'		=> 'http://mods.mybb.com/view/ougc-post-character-count-enhancement',
-		'author'		=> 'Omar Gonzalez',
-		'authorsite'	=> 'http://community.mybb.com/user-25096.html',
+		'author'		=> 'Omar G.',
+		'authorsite'	=> 'http://omarg.me',
 		'version'		=> '1.0',
-		'guid' 			=> '2b70c8cd879291b5d65a6aacb9ee0473',
-		'compatibility' => '16*'
+		'versioncode'	=> 1000,
+		'compatibility'	=> '16*',
+		'guid' 			=> '2b70c8cd879291b5d65a6aacb9ee0473'
 	);
 }
 
-function ougc_pochcoen(&$dh)
+// _activate() routine
+function ougc_pochcoen_activate()
 {
-	if(!empty($dh->data['message']))
+	global $cache;
+
+	// Insert/update version into cache
+	$plugins = $cache->read('ougc_plugins');
+	if(!$plugins)
 	{
-		global $settings;
+		$plugins = array();
+	}
 
-		$msgcount = ougc_pochcoen_countchars($dh->data['message']);
-		$minchars = (int)$settings['minmessagelength'];
+	$info = ougc_pochcoen_info();
 
-		if($msgcount < $minchars && $minchars > 0 && !is_moderator($dh->data['fid'], '', $dh->data['uid']))
-		{
-			$dh->set_error('message_too_short', array($minchars));
-		}
+	if(!isset($plugins['pochcoen']))
+	{
+		$plugins['pochcoen'] = $info['versioncode'];
+	}
+
+	/*~*~* RUN UPDATES START *~*~*/
+
+	/*~*~* RUN UPDATES END *~*~*/
+
+	$plugins['pochcoen'] = $info['versioncode'];
+	$cache->update('ougc_plugins', $plugins);
+}
+
+// _is_installed() routine
+function ougc_pochcoen_is_installed()
+{
+	global $cache;
+
+	$plugins = (array)$cache->read('ougc_plugins');
+
+	return !empty($plugins['pochcoen']);
+}
+
+// _uninstall() routine
+function ougc_pochcoen_uninstall()
+{
+	global $cache;
+
+	// Delete version from cache
+	$plugins = (array)$cache->read('ougc_plugins');
+
+	if(isset($plugins['pochcoen']))
+	{
+		unset($plugins['pochcoen']);
+	}
+
+	if(!empty($plugins))
+	{
+		$cache->update('ougc_plugins', $plugins);
+	}
+	else
+	{
+		global $db;
+
+		$db->delete_query('datacache', 'title=\'ougc_plugins\'');
+		!is_object($cache->handler) or $cache->handler->delete('ougc_plugins');
 	}
 }
 
-/*
-* Shorts a message to look like a preview.
-*
-* @param string Message to short.
-* @param int Maximum characters to show.
-* @param bool Strip MyCode Quotes from message.
-* @param bool Strip MyCode from message.
-*/
-function ougc_pochcoen_countchars($message)
+if(!function_exists('ougc_countchars'))
 {
-	// Attempt to remove any quotes
+	/**
+	 * Counts a message's characters removing special code.
+	 * Based off Zinga Burga's "Thread Tooltip Preview" plugin threadtooltip_getpreview() function.
+	 *
+	 * @param string Message to count.
+	 * @return integer Characters count
+	**/
+	function ougc_countchars($message)
+	{
+		// Attempt to remove any quotes
 		$message = preg_replace(array(
 			'#\[quote=([\"\']|&quot;|)(.*?)(?:\\1)(.*?)(?:[\"\']|&quot;)?\](.*?)\[/quote\](\r\n?|\n?)#esi',
 			'#\[quote\](.*?)\[\/quote\](\r\n?|\n?)#si',
@@ -88,7 +156,7 @@ function ougc_pochcoen_countchars($message)
 			'#\[\/quote\]#si'
 		), '', $message);
 
-	// Attempt to remove any MyCode
+		// Attempt to remove any MyCode
 		global $parser;
 		if(!is_object($parser))
 		{
@@ -113,15 +181,16 @@ function ougc_pochcoen_countchars($message)
 
 		$message = unhtmlentities(strip_tags($message));
 
-	// Remove all spaces?
+		// Remove all spaces?
 		$message = trim_blank_chrs($message);
 		$message = preg_replace('/\s+/', '', $message);
 
-	// convert \xA0 to spaces (reverse &nbsp;)
+		// convert \xA0 to spaces (reverse &nbsp;)
 		$message = trim(preg_replace(array('~ {2,}~', "~\n{2,}~"), array(' ', "\n"), strtr($message, array("\xA0" => ' ', "\r" => '', "\t" => ' '))));
 
-	// newline fix for browsers which don't support them
+		// newline fix for browsers which don't support them
 		$message = preg_replace("~ ?\n ?~", " \n", $message);
 
-	return (int)my_strlen($message);
+		return (int)my_strlen($message);
+	}
 }
