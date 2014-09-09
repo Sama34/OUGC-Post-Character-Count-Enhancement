@@ -8,10 +8,10 @@
  *
  *	Website: http://omarg.me
  *
- *	Strips HTML/MyCode/Quotes from being counted in the minimum/maximum characters per post verification proccess.
+ *	Strips HTML/MyCode/Quotes from being counted in the minimum/maximum characters per post verification process.
  *
  ***************************************************************************
-
+ 
 ****************************************************************************
 	This program is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -59,17 +59,15 @@ if(!defined('IN_ADMINCP'))
 // Plugin API
 function ougc_pochcoen_info()
 {
-	global $lang;
-
 	return array(
 		'name'			=> 'OUGC Post Character Count Enhancement',
-		'description'	=> 'Strips HTML/MyCode/Quotes from being counted in the minimum/maximum characters per post verification proccess.',
-		'website'		=> 'http://mods.mybb.com/view/ougc-post-character-count-enhancement',
+		'description'	=> 'Strips HTML/MyCode/Quotes from being counted in the minimum/maximum characters per post verification process.',
+		'website'		=> 'http://omarg.me',
 		'author'		=> 'Omar G.',
 		'authorsite'	=> 'http://omarg.me',
-		'version'		=> '1.1',
-		'versioncode'	=> 1100,
-		'compatibility'	=> '16*',
+		'version'		=> '1.8.0',
+		'versioncode'	=> '1800',
+		'compatibility'	=> '16*,18*',
 		'guid' 			=> '2b70c8cd879291b5d65a6aacb9ee0473'
 	);
 }
@@ -128,12 +126,16 @@ function ougc_pochcoen_uninstall()
 	{
 		$cache->update('ougc_plugins', $plugins);
 	}
+	elseif(method_exists($cache, 'delete'))
+	{
+		$cache->delete('ougc_plugins');
+	}
 	else
 	{
 		global $db;
 
-		$db->delete_query('datacache', 'title=\'ougc_plugins\'');
 		!is_object($cache->handler) or $cache->handler->delete('ougc_plugins');
+		$db->delete_query('datacache', 'title=\'ougc_plugins\'');
 	}
 }
 
