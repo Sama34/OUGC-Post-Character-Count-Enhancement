@@ -4,11 +4,11 @@
  *
  *	OUGC Post Character Count Enhancement plugin (/inc/plugins/ougc_pochcoen.php)
  *	Author: Omar Gonzalez
- *	Copyright: © 2013-2014 Omar Gonzalez
+ *	Copyright: © 2013-2019 Omar Gonzalez
  *
  *	Website: http://omarg.me
  *
- *	Strips HTML/MyCode/Quotes from being counted in the minimum/maximum characters per post verification process.
+ *	Strips HTML/MyCode/Quotes from being counted in the minimum characters per post verification process.
  *
  ***************************************************************************
  
@@ -33,27 +33,8 @@ defined('IN_MYBB') or die('Direct initialization of this file is not allowed.');
 // Run/Add Hooks
 if(!defined('IN_ADMINCP'))
 {
-	$function = create_function('&$dh', '
-		// Message is not being edited
-		if(!isset($dh->data[\'message\']))
-		{
-			return;
-		}
-
-		global $settings;
-
-		$msgcount = ougc_countchars($dh->data[\'message\']);
-		$minchars = (int)$settings[\'minmessagelength\'];
-
-		if($msgcount < $minchars && $minchars > 0 && !is_moderator($dh->data[\'fid\'], \'\', $dh->data[\'uid\']))
-		{
-			$dh->set_error(\'message_too_short\', array($minchars));
-		}
-	');
-
-	$plugins->add_hook('datahandler_post_validate_post', $function);
-	$plugins->add_hook('datahandler_post_validate_thread', $function);
-	unset($function);
+	$plugins->add_hook('datahandler_post_validate_post', 'ougc_pochcoen_datahandler');
+	$plugins->add_hook('datahandler_post_validate_thread', 'ougc_pochcoen_datahandler');
 }
 
 // Plugin API
@@ -61,14 +42,14 @@ function ougc_pochcoen_info()
 {
 	return array(
 		'name'			=> 'OUGC Post Character Count Enhancement',
-		'description'	=> 'Strips HTML/MyCode/Quotes from being counted in the minimum/maximum characters per post verification process.',
-		'website'		=> 'http://omarg.me',
+		'description'	=> 'Strips HTML/MyCode/Quotes from being counted in the minimum characters per post verification process.',
+		'website'		=> 'https://omarg.me/thread?public/plugins/ougc-post-character-count-enhancement',
 		'author'		=> 'Omar G.',
 		'authorsite'	=> 'http://omarg.me',
-		'version'		=> '1.8.0',
-		'versioncode'	=> '1800',
-		'compatibility'	=> '16*,18*',
-		'guid' 			=> '2b70c8cd879291b5d65a6aacb9ee0473'
+		'version'		=> '1.8.19',
+		'versioncode'	=> 1819,
+		'compatibility'	=> '18*',
+		'codename'		=> 'ougc_pochcoen'
 	);
 }
 
@@ -139,6 +120,26 @@ function ougc_pochcoen_uninstall()
 	}
 }
 
+// Hook code
+function ougc_pochcoen_datahandler(&$dh)
+{
+	// Message is not being edited
+	if(!isset($dh->data['message']))
+	{
+		return;
+	}
+
+	global $settings;
+
+	$msgcount = ougc_countchars($dh->data['message']);
+	$minchars = (int)$settings['minmessagelength'];
+
+	if($msgcount < $minchars && $minchars > 0 && !is_moderator($dh->data['fid'], '', $dh->data['uid']))
+	{
+		$dh->set_error('message_too_short', array($minchars));
+	}
+}
+
 if(!function_exists('ougc_countchars'))
 {
 	/**
@@ -151,12 +152,12 @@ if(!function_exists('ougc_countchars'))
 	function ougc_countchars($message)
 	{
 		// Attempt to remove any quotes
-		$message = preg_replace(array(
-			'#\[quote=([\"\']|&quot;|)(.*?)(?:\\1)(.*?)(?:[\"\']|&quot;)?\](.*?)\[/quote\](\r\n?|\n?)#esi',
+		$message = preg_replace_callback(array(
+			'#\[quote=([\"\']|&quot;|)(.*?)(?:\\1)(.*?)(?:[\"\']|&quot;)?\](.*?)\[/quote\](\r\n?|\n?)#si',
 			'#\[quote\](.*?)\[\/quote\](\r\n?|\n?)#si',
 			'#\[quote\]#si',
 			'#\[\/quote\]#si'
-		), '', $message);
+		), function($matches){ return ''; }, $message);
 
 		// Attempt to remove any MyCode
 		global $parser;
