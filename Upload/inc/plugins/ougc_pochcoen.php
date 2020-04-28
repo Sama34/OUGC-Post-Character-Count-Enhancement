@@ -4,9 +4,9 @@
  *
  *	OUGC Post Character Count Enhancement plugin (/inc/plugins/ougc_pochcoen.php)
  *	Author: Omar Gonzalez
- *	Copyright: © 2013-2019 Omar Gonzalez
+ *	Copyright: © 2013-2020 Omar Gonzalez
  *
- *	Website: http://omarg.me
+ *	Website: https://ougc.network
  *
  *	Strips HTML/MyCode/Quotes from being counted in the minimum characters per post verification process.
  *
@@ -43,11 +43,11 @@ function ougc_pochcoen_info()
 	return array(
 		'name'			=> 'OUGC Post Character Count Enhancement',
 		'description'	=> 'Strips HTML/MyCode/Quotes from being counted in the minimum characters per post verification process.',
-		'website'		=> 'https://omarg.me/thread?public/plugins/ougc-post-character-count-enhancement',
+		'website'		=> 'https://ougc.network',
 		'author'		=> 'Omar G.',
-		'authorsite'	=> 'http://omarg.me',
-		'version'		=> '1.8.19',
-		'versioncode'	=> 1819,
+		'authorsite'	=> 'https://ougc.network',
+		'version'		=> '1.8.22',
+		'versioncode'	=> 1822,
 		'compatibility'	=> '18*',
 		'codename'		=> 'ougc_pochcoen'
 	);
